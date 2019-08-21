@@ -62,6 +62,7 @@ struct mesh
 
 bool background_state = false;
 
+// glm::mat4 model = new glm::mat4(1.f);
 glm::mat4 model(1.f);
 glm::mat4 projection(1.f);
 
@@ -374,44 +375,54 @@ mesh load_triangle_mesh(
     return { vao, vbo, ebo, indexes, vertexes };
 }
 
-void load_square()
+void load_square(GLuint& vao, GLuint& vbo)
 {
     GLfloat vertexes[] =
     {
         // First triangle:
-        0.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 0.0f,
-        1.0f, 1.0f, 0.0f,
+        // position     , normal
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
 
         // Second triangle:
-        0.0f, 0.0f, 0.0f,
-        1.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
+        // position     , normal
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
     };
 
-    GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
-    GLuint vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
     glBufferData(
         GL_ARRAY_BUFFER,
-        sizeof(vertexes),
-        vertexes, // or: 18 * sizeof(GLfloat)
+        sizeof(vertexes), // 18 * sizeof(GLfloat)
+        vertexes,
         GL_STATIC_DRAW);
 
-    // Configure vertex position:
+    // Position:
     glVertexAttribPointer(
         0,
         3,
         GL_FLOAT,
         GL_FALSE,
-        3 * sizeof(float),
-        nullptr);
+        6 * sizeof(GLfloat),
+        (void*)(0 * sizeof(GLfloat)));
     glEnableVertexAttribArray(0);
+
+    // Color:
+    glVertexAttribPointer(
+        1,
+        3,
+        GL_FLOAT,
+        GL_FALSE,
+        6 * sizeof(GLfloat),
+        (void*)(3 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
 }
 
 bool compile_shader(std::string const& filename, GLenum type, GLuint& id)
@@ -577,7 +588,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Aula 1", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Flávio", nullptr, nullptr);
     if (window == nullptr)
     {
         std::cerr << "Could not instantiate the main window.\n";
@@ -608,7 +619,7 @@ int main()
 
     glUseProgram(program_id);
 
-    std::string const filename = "../res/meshes/bunny.obj";
+    /*std::string const filename = "../res/meshes/bunny.obj";
     std::vector<glm::vec3> positions;
     std::vector<glm::vec3> normals;
     std::vector<glm::vec2> uvs;
@@ -617,13 +628,15 @@ int main()
     std::vector<size_t> uv_idxs;
     //readTriangleMesh(filename, positions, normals, uvs, position_idxs, normal_idxs, uv_idxs);
     read_triangle_mesh(filename, positions, normals, uvs, position_idxs, normal_idxs, uv_idxs);
-    mesh m = load_triangle_mesh(positions, normals, uvs, position_idxs, normal_idxs, uv_idxs, GL_STATIC_DRAW);
+    mesh m = load_triangle_mesh(positions, normals, uvs, position_idxs, normal_idxs, uv_idxs, GL_STATIC_DRAW);*/
+    GLuint vao, vbo;
+    load_square(vao, vbo);
 
     glEnable(GL_DEPTH_TEST);
     glClearDepth(1.0f);
 
     glm::mat4 view = glm::lookAt(
-        glm::vec3(0.0f, 0.0f, 1.0f),
+        glm::vec3(0.0f, 0.0f, 3.0f),
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f));
 
@@ -635,7 +648,6 @@ int main()
 
     while (!glfwWindowShouldClose(window))
     {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         if (background_state)
         {
             glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -645,18 +657,23 @@ int main()
             glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         }
 
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         glUniformMatrix4fv(view_id, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(model_id, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(projection_id, 1, GL_FALSE, glm::value_ptr(projection));
 
-        glDrawElements(GL_TRIANGLES, position_idxs.size(), GL_UNSIGNED_INT, nullptr);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        //glDrawElements(GL_TRIANGLES, position_idxs.size(), GL_UNSIGNED_INT, nullptr);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     glDeleteProgram(program_id);
-    glDeleteVertexArrays(1, &m.vao);
+    //glDeleteVertexArrays(1, &m.vao);
+
+    glDeleteVertexArrays(1, &vao);
 
     glfwDestroyWindow(window);
     glfwTerminate();
